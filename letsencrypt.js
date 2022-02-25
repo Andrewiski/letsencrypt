@@ -16,15 +16,16 @@ var LetsEncrypt = function (options) {
     var defaultOptions = {
         certificatesFolder: './certs',
         accountFolder: './certs/accounts',
-        backupFolder: './certs/accounts',
-        eventHandler: null
+        backupFolder: './certs/backups',
+        eventHandler: null,
+        canRenewInDays: 30
     };
     
 
 
     if(options.certificatesFolder){
-        defaultOptions.accountFolder = path.join(defaultOptions.certificatesFolder, 'accounts');
-        defaultOptions.backupFolder = path.join(defaultOptions.certificatesFolder, 'backups');
+        defaultOptions.accountFolder = path.join(options.certificatesFolder, 'accounts');
+        defaultOptions.backupFolder = path.join(options.certificatesFolder, 'backups');
     }
 
     self.options = extend({}, defaultOptions, options);
@@ -98,37 +99,7 @@ var LetsEncrypt = function (options) {
     }
 
    
-    // var loadX509PrivateKey = function (options) {
-    //     let deferred = Deferred();
-    //     try {
-    //             let x509key = loadX509PrivateKeySync(options);
-    //             deferred.resolve(x509key);    
-    //     } catch (ex) {
-    //         deferred.reject('error', ex);
-    //     }
-    //     return deferred.promise;
-    // }
-
-
-    // var loadX509PrivateKeySync = function (options) {
-    //     let deferred = Deferred();
-    //     try {
-    //         let privateKeyPem = null;
-    //         debug('Loading saved private Server Key File ..');
-    //         if (fs.existsSync( options.privateKeyFile)) {
-    //             var privateKeyPem = fs.readFileSync(options.privateKeyFile, { encoding: 'ascii' });
-                
-    //                 debug('Loading Private Pem into x509 Key ..');
-    //                 return PrivateKey.fromPEM(privateKeyPem);
-    //         } else {
-    //             throw "Private Key File Not Found ";
-    //         }
-    //     } catch (ex) {
-    //         debug('error', 'Error loading Server Private Key and Public Cert', ex);
-    //         throw ex;
-    //     }
-        
-    // }
+    
 
     var loadX509CertSync = function (options) {
             
@@ -166,7 +137,7 @@ var LetsEncrypt = function (options) {
             var retval = null;
             var certs = [];
             certs = Certificate.fromPEMs(certBuffer);
-            var now = new Date();
+            let now = new Date();
             for (let i = 0; i < certs.length; i++) {
                 let x509cert = certs[i];
                 //default are checks to false
@@ -177,6 +148,11 @@ var LetsEncrypt = function (options) {
                 x509cert.isExpired = false;
                 if(x509cert.validFrom > now && x509cert.validTo < now){
                     x509cert.isExpired = true;
+                }
+                let canRenewDate = new Date();
+                canRenewDate.setTime(now.getTime()-(self.options.canRenewInDays*86400000));
+                if(x509cert.validTo <= canRenewDate){
+                    x509cert.canBeRenewed = true;
                 }
                 retval = x509cert;
                 if (key) {
@@ -242,6 +218,68 @@ var LetsEncrypt = function (options) {
     } 
 
     //setTimeout(1000 * 60 * 60 * 24)
+    var checkCertificate = function(options){
+        var needToCreateCertificates = false;
+            if(fs.existsSync( options.keyFile) == false || fs.existsSync(options.certFile) == false ){
+                needToCreateCertificates = true;
+            }
+            if(needToCreateCertificates === false ){
+                try{
+                    var x509Cert = letsEncrypt.loadX509CertSync({certFile:certFile , keyFile:options.keyFile });
+                    if(x509Cert.isExpired === true){
+                        needToCreateCertificates = true;
+                    }
+                    if(x509Cert.privateKeyValid === false){
+                        needToCreateCertificates = true;
+                    }
+                    //Are we within the Renew Windows
+                    if(x509Cert.canBeRenewed){
+                        needToCreateCertificates = true;
+                    }
+                    //IS the current certificate an exact match for the dns names as if the changed the DNS Names we should request a new Certificate
+                    for (let i = 0; i < x509Cert.dnsNames.length; i++) {
+                        if(x509Cert.canBeRenewed){
+                            needToCreateCertificates = true;
+                        }
+                    }
+
+                    
+                }catch(ex){
+                    needToCreateCertificates = true;
+                }
+            }
+
+        
+    }
+
+
+
+    var checkCreateRenewScheduleCertificate = function(options){
+        let deferred = Deferred();
+        try {
+            var needToCreateCertificates = checkCertificate(options);
+            
+
+            if(needToCreateCertificates){
+                createRenewServerCertificate(options).then(
+                    function(result){
+                        deferred.resolve(result);    
+                    },
+                    function(err){
+                        deferred.reject( err);
+                    }
+                )
+            }else{
+                deferred.resolve({ success: true, error: null, msg: "Certificated are Valid", keyFile: options.keyFile, certFile: options.certFile });    
+            }
+        }catch (ex) {
+            debug( 'error', 'Error Renewing Certificate', ex);
+            
+            deferred.reject( {  status: 'complete', success: false, error: ex, msg: "Error Renewing Certificate" });
+            
+        }
+            return deferred.promise;
+    }
 
     var createRenewServerCertificate = function (options) {
         let deferred = Deferred();
@@ -295,7 +333,7 @@ var LetsEncrypt = function (options) {
             var acmeCertificateManagerOptions = {
                 maintainerEmail: "adevries@digitalexample.com",
                 subscriberEmail: myOptions.certificateSubscriberEmail,
-                acmeAccountFile: path.join(self.options.accountFolder, myOptions.certificateSubscriberEmail.replace(/[/\\?%*:|"<>]/g, '-') + "-acmeAccount.json"),
+                acmeAccountFile: path.join(self.options.accountFolder, myOptions.certificateSubscriberEmail.replace(/[/\\?%*:|"<>]/g, '-') + "-" + new URL(acmeUrl).hostname + "-acmeAccount.json"),
                 retryInterval: myOptions.retryInterval,
                 retryPending: myOptions.retryPending,
                 retryPoll: myOptions.retryPoll,
@@ -400,7 +438,7 @@ var LetsEncrypt = function (options) {
             );
         }
         catch (ex) {
-            debug( 'error', 'Error Renewing Certificate', ex);
+            debug( 'error', 'createRenewServerCertificate()', 'Error Renewing Certificate', ex);
             
             deferred.reject( {  status: 'complete', success: false, error: ex, msg: "Error Renewing Certificate" });
             
@@ -412,8 +450,9 @@ var LetsEncrypt = function (options) {
 
     // assign the functions we want to export
     self.createRenewServerCertificate = createRenewServerCertificate;
+    self.checkCreateRenewScheduleCertificate =checkCreateRenewScheduleCertificate;
+    self.checkCertificate =checkCertificate
     self.getToken = getToken;
-    self.removeToken = removeToken;
     self.loadX509Cert = loadX509Cert;
     // self.loadX509PrivateKey = loadX509PrivateKey;
     self.loadX509CertSync = loadX509CertSync;

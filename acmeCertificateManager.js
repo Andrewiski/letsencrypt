@@ -5,7 +5,7 @@ const ACME = require('@root/acme');
 //const ACME = require('acme');
 
 const fs = require('fs');
-const debug = require('debug')('acmeCertificateManager');
+const debug = require('debug')('letsencrypt:acmeCertificateManager');
 const Keypairs = require('@root/keypairs');
 const CSR = require('@root/csr');
 const PEM = require('@root/pem');
@@ -28,7 +28,7 @@ module.exports.create = function (defaults) {
             inited: false,
             account: null,
             packageAgent: 'github-andrewiski-letsencrypt-acmeCertificateManager/1.1',
-            directoryUrl: 'https://acme-v02.api.letsencrypt.org/directory', // 'https://acme-v02.api.letsencrypt.org/directory' 'https://acme-staging-v02.api.letsencrypt.org/directory' 
+            directoryUrl: defaults.directoryUrl || 'https://acme-v02.api.letsencrypt.org/directory', // 'https://acme-v02.api.letsencrypt.org/directory' 'https://acme-staging-v02.api.letsencrypt.org/directory' 
             acme: null,
             options: defaults,
             accountPrivateKey: null,
@@ -392,96 +392,7 @@ module.exports.create = function (defaults) {
             return deferred.promise;
         }
 
-        //, createLetsEncryptOrder: function (options) {
-        //    let deferred = Deferred();
-        //    try {
-
-        //        handlers.init().then(
-        //            function () {
-        //                var domains = options.domains.map(
-        //                    function (name) {
-        //                        return punycode.toASCII(name);
-        //                    }
-        //                );
-
-        //                CSR.csr({ jwk: options.serverKey, domains: domains, encoding: 'der' }).then(
-        //                    function (csrDer) {
-        //                        var csr = PEM.packBlock({ type: 'CERTIFICATE REQUEST', bytes: csrDer });
-
-        //                        var challenges = {
-        //                            'http-01': handlers._private.options.http01
-        //                        };
-
-        //                        debug('info', 'validating domain authorization for ' + domains.join(' '));
-
-        //                        let orderOptions = {
-        //                            account: handlers._private.account,
-        //                            accountKey: handlers._private.accountPrivateKey,
-        //                            csr: csr,
-        //                            domains: domains,
-        //                            challenges: challenges
-        //                        };
-
-        //                        handlers._private.acme.authorizations.get(orderOptions).then(
-        //                            function (order) {
-        //                                debug('info', 'Order Created for Domain' + domains.join(' '));
-        //                                orderOptions.order = order;
-        //                                deferred.resolve(orderOptions);
-        //                            },
-        //                            function (ev, msg) {
-        //                                debug('error', 'Error Creating Order ' + domains.join(' '), ev, msg);
-        //                                deferred.reject(ev, msg);
-        //                            }
-
-        //                        );
-
-        //                    },
-        //                    function (ev, msg) {
-        //                        debug('error', 'Error Generating CSR ', ev, msg);
-        //                        deferred.reject(ev, msg);
-        //                    }
-        //                );
-
-        //            }, function (ev, msg) {
-        //                debug('error', 'Error Init ACME', ev, msg);
-        //                deferred.reject(ev, msg);
-        //            }
-        //        );
-        //    } catch (ex) {
-        //        debug('error', 'Error Creating Cert', ex);
-        //        deferred.reject('error', ex);
-        //    }
-        //    return deferred.promise;
-        //}
-
-
-        //, finalizeLetsEncryptOrder: function (orderOptions) {
-        //    let deferred = Deferred();
-        //    try {
-        //        handlers.init().then(
-        //            function () {
-        //                handlers._private.acme.authorizations.present(orderOptions).then(
-        //                    function (pem) {
-        //                        debug('info', 'Order Finalized for Domain' + orderOptions.domains.join(' '));
-        //                        deferred.resolve(pem);
-        //                    },
-        //                    function (ev, msg) {
-        //                        debug('error', 'Error Finalizing Order ' + orderOptions.domains.join(' '), ev, msg);
-        //                        deferred.reject(ev, msg);
-        //                    }
-        //                );
-        //            }, function (ev, msg) {
-        //                debug('error', 'Error Init ACME', ev, msg);
-        //                deferred.reject(ev, msg);
-        //            }
-        //        );
-
-        //    } catch (ex) {
-        //        debug('error', 'Error Finalizing Order ', ex);
-        //        deferred.reject('error', ex);
-        //    }
-        //    return deferred.promise;
-        //}
+        
 
         , init: function () {
             let deferred = Deferred();

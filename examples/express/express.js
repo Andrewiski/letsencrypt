@@ -171,35 +171,54 @@ var startHttpsServer = function(){
 
 var checkCertificateStatus = function(){
 
-    letsEncrypt.checkCreateRenewScheduleCertificate(
-        {
-            keyFile:  httpsServerKey,
-            certFile: httpsServerCert,
-            dnsNames: dnsNames,
-            certificateSubscriberEmail:certificateSubscriberEmail,  //used to create Lets Encrypt Account
-            https_srv: https_srv,  //setSecureContext will be called on this object if we get a cert to update the current cert beign used
-            useLetsEncryptStagingUrl : true,
-            skipDryRun: true,
-            skipChallengeTest: true,  //When set to false Started getting a self signed certificate in Windows on ChallengeTest but could not find what in the challenge was using TLS and exceptions had not stack other then Node TLS Calls.
-            debug: true
-            
-            //acmeServerUrlOverride: null,
-            //retryInterval: 15000,
-            //retryPending: 10,
-            //retryPoll: 10,
-            //deauthWait: 30000
+    var needToCreateCertificates = false;
+    if(fs.existsSync( httpsServerKey) == false || fs.existsSync(httpsServerCert) == false ){
+        needToCreateCertificates = true;
+    }
+    if(needToCreateCertificates === false ){
+        try{
+           var x509Cert = letsEncrypt.loadX509CertSync({certFile:httpsServerCert , keyFile:httpsServerKey });
+           if(x509Cert.isExpired === true){
+            needToCreateCertificates = true;
+           }
+           if(x509Cert.privateKeyValid === false){
+            needToCreateCertificates = true;
+           }
+        }catch(ex){
+            needToCreateCertificates = true;
+        }
+    }
 
-        }
-    ).then(
-        function(result){
-            console.log('Success Create/Renew Server Certificate', result);
-            updateHttpsServer()
-        },
-        function(err){
-            console.error('Error Create/Renew Server Certificate', err);
-        }
-    )    
-   
+    if(needToCreateCertificates === true || fs.existsSync(httpsServerKey) === false || fs.existsSync(httpsServerCert) === false ){
+        letsEncrypt.createRenewServerCertificate(
+            {
+                keyFile:  httpsServerKey,
+                certFile: httpsServerCert,
+                dnsNames: dnsNames,
+                certificateSubscriberEmail:certificateSubscriberEmail,  //used to create Lets Encrypt Account
+                https_srv: https_srv,  //setSecureContext will be called on this object if we get a cert to update the current cert beign used
+                useLetsEncryptStagingUrl : true,
+                skipDryRun: true,
+                skipChallengeTest: true,  //When set to false Started getting a self signed certificate in Windows on ChallengeTest but could not find what in the challenge was using TLS and exceptions had not stack other then Node TLS Calls.
+                debug: true
+                
+                //acmeServerUrlOverride: null,
+                //retryInterval: 15000,
+                //retryPending: 10,
+                //retryPoll: 10,
+                //deauthWait: 30000
+
+            }
+        ).then(
+            function(result){
+                console.log('Success Create/Renew Server Certificate', result);
+                updateHttpsServer()
+            },
+            function(err){
+                console.error('Error Create/Renew Server Certificate', err);
+            }
+        )    
+    }
 }
 
 
@@ -207,9 +226,10 @@ var checkCertificateStatus = function(){
 //This function is called on an https certificate change
 var updateHttpsServer = function () {
     if(https_srv === null){
-        startHttpsServer();
-        //need to update letsEncrypt.options so it will autoupdate https.setSecureContext
-        letsEncrypt.option.http_srv = https_srv;
+        startHttpsServer() 
+    }
+    if(https_srv !== null){
+        https_srv.setSecureContext(getHttpsServerOptions());
     }
 };
 
