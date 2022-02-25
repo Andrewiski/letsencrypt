@@ -1,0 +1,28 @@
+{
+    "name": "opensslexample",
+    "version": "0.0.1",
+    "description": "Open SSL Basic Example",
+    "main": "basic.js",
+    "license": "GPL-3.0-or-later",
+    "private": false,
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/andrewiski/openssl"
+    },
+    "author": {
+      "name": "Andrew DeVries",
+      "email": "adevries@digitalexample.com",
+      "url": "https://digitalexample.com"
+    },
+    
+    "engines": {
+      "node": ">=12.0"
+    },
+    "scripts": {
+      "start": "DEBUG=openssl node basic.js"
+    },
+    "dependencies": {
+        "@andrewiski/openssl": "^1.0.1"
+    }
+  }
+  

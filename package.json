@@ -1,0 +1,37 @@
+{
+    "name": "@andrewiski/letsencrypt",
+    "version": "1.0.1",
+    "description": "Tool to assist with creating and requesting lets Encrypt certificates from Node",
+    "main": "letsencrypt.js",
+    "license": "GPL-3.0-or-later",
+    "private": false,
+    "repository": {
+      "type": "git",
+      "url": "https://github.com/andrewiski/letsencrypt"
+    },
+    "author": {
+      "name": "Andrew DeVries",
+      "email": "adevries@digitalexample.com",
+      "url": "https://digitalexample.com"
+    },
+    
+    "engines": {
+      "node": ">=12.0"
+    },
+    "scripts": {
+      "test": "node test/test-letsencryptjs",
+      "start": "DEBUG=letsencrypt,acmeCertificateManager USELOCALLIB=true node example/basic.js"
+    },
+    "dependencies": {
+      "@fidm/x509": "^1.2.1",
+      "@root/acme": "^3.1.0",
+      "@root/csr": "^0.8.1",
+      "@root/keypairs": "^0.10.3",
+      "debug": "^4.3.2",
+      "deferred": "^0.7.11",
+      "extend": "^3.0.2",
+      "moment": "^2.29.1",
+      "punycode": "^2.1.1"
+    }
+  }
+  
