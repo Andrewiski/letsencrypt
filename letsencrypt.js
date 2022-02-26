@@ -217,7 +217,7 @@ var LetsEncrypt = function (options) {
 
     } 
 
-    //setTimeout(1000 * 60 * 60 * 24)
+    
     var checkCertificate = function(options){
         var needToCreateCertificates = false;
             if(fs.existsSync( options.keyFile) == false || fs.existsSync(options.certFile) == false ){
@@ -225,7 +225,7 @@ var LetsEncrypt = function (options) {
             }
             if(needToCreateCertificates === false ){
                 try{
-                    var x509Cert = letsEncrypt.loadX509CertSync({certFile:certFile , keyFile:options.keyFile });
+                    var x509Cert = loadX509CertSync({certFile:options.certFile , keyFile:options.keyFile });
                     if(x509Cert.isExpired === true){
                         needToCreateCertificates = true;
                     }
@@ -237,10 +237,22 @@ var LetsEncrypt = function (options) {
                         needToCreateCertificates = true;
                     }
                     //IS the current certificate an exact match for the dns names as if the changed the DNS Names we should request a new Certificate
-                    for (let i = 0; i < x509Cert.dnsNames.length; i++) {
-                        if(x509Cert.canBeRenewed){
-                            needToCreateCertificates = true;
+                    if(x509Cert.dnsNames.length === options.dnsNames.length){
+                        for (let i = 0; i < options.dnsNames.length; i++) {
+                            let foundDnsName = false;
+                            for (let k = 0; k < x509Cert.dnsNames.length; i++) {
+                                if(options.dnsNames[i] === x509Cert.dnsNames[k]){
+                                    foundDnsName = true;
+                                    break;
+                                }
+                            }
+                            if(foundDnsName === false){
+                                needToCreateCertificates = true;
+                                break;
+                            }
                         }
+                    }else{
+                        needToCreateCertificates = true;
                     }
 
                     
@@ -248,11 +260,88 @@ var LetsEncrypt = function (options) {
                     needToCreateCertificates = true;
                 }
             }
-
-        
+            return needToCreateCertificates;
     }
 
 
+    var httpRequestHandler = function(req, res, next){
+        try{
+            if (req.url.startsWith('/.well-known/acme-challenge/'))
+            {    
+                let token = req.url.substring('/.well-known/acme-challenge/'.length);
+                getToken({ token:token }).then(
+                    function (challenge) {
+                        if (challenge && challenge.keyAuthorization) {  //Add Expiration Check
+                            res.setHeader('content-type', 'application/octet-stream');
+                            //res.send(challenge.keyAuthorization);
+                            
+                            res.end(challenge.keyAuthorization, 'utf8');
+                            //letsEncrypt.removeToken({ token: token })
+                            //finalizeOrder();
+                            debug("info","Challenge Was Returned " + req.url + " " + challenge.keyAuthorization )
+                        } else {
+                            debug("warning","Challenge Not Found");
+                            //res.status(404).send('Challenge Not Found');
+                            res.statusCode = 404;
+                            res.end('Challenge Not Found');
+                        }
+                    },
+                    function (ex) {
+                        debug("error",'Challenge Not Found', ex);
+                        //res.status(404).send(ex);
+                        res.statusCode = 500;
+                        res.end('Challenge Not Found ' + ex.message, 'utf8');
+                    }
+                );
+                
+            }else {
+                if(next){
+                    next();
+                }
+
+            }
+            
+        }catch(ex){
+            debug("error",'httpRequestListener', ex);
+            //res.status(500).send(ex);
+            throw(ex);
+        }
+    
+    }
+
+    var autoRenewList = {};
+    var processAutoRenewList = function(){
+        try{
+            for (const [key, value] of Object.entries(autoRenewList)) {
+                debug("info", `processing autorenew for ${key}`);
+                value.lastRunStart = new Date();
+                checkCreateRenewScheduleCertificate(value.options).then(
+                    function(result){
+                        debug("info", `success processing autorenew for ${key}`);
+                        value.lastResult = result;
+                        value.lastRunEnd = new Date();
+                    },
+                    function(err){
+                        debug("error", `success processing autorenew for ${key}`);
+                        value.lastResult = err;
+                        value.lastRunEnd = new Date();
+                    }
+                )
+            }
+        }catch(ex){
+            debug( 'error', 'processAutoRenewList', ex);
+        }   
+    }
+    var autoRenewTimer = null;
+    var startAutoRenewScheduler = function()
+    {
+        if(autoRenewTimer !== null){
+            clearTimeout(autoRenewTimer)
+        }
+
+        autoRenewTimer = setTimeout(processAutoRenewList, 1000 * 60 * 60 * 24);
+    }
+    startAutoRenewScheduler();
 
     var checkCreateRenewScheduleCertificate = function(options){
         let deferred = Deferred();
@@ -271,6 +360,11 @@ var LetsEncrypt = function (options) {
                 )
             }else{
                 deferred.resolve({ success: true, error: null, msg: "Certificated are Valid", keyFile: options.keyFile, certFile: options.certFile });    
+            }
+            if(options.autoRenew){
+                let myKey = options.dnsNames[0].replace(/\./g, "-");
+                autoRenewList[myKey] = {options: options};
+                
             }
         }catch (ex) {
             debug( 'error', 'Error Renewing Certificate', ex);
@@ -300,6 +394,7 @@ var LetsEncrypt = function (options) {
                 retryPending: 10,
                 retryPoll: 10,
                 deauthWait: 30000
+                
             };
             
             let myOptions = extend({}, defaultOptions, options);
@@ -454,9 +549,9 @@ var LetsEncrypt = function (options) {
     self.checkCertificate =checkCertificate
     self.getToken = getToken;
     self.loadX509Cert = loadX509Cert;
-    // self.loadX509PrivateKey = loadX509PrivateKey;
     self.loadX509CertSync = loadX509CertSync;
-
+    self.httpRequestHandler = httpRequestHandler;
+    self.processAutoRenewList = processAutoRenewList;  //only exposed for Testing
 };
 
 module.exports = LetsEncrypt;

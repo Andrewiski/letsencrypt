@@ -1,6 +1,7 @@
 examples/basic/certs
-examples/letsEncrypt/certs
-examples/cli/certs
+examples/express/certs
+.rnd
+
 
 # Logs
 logs

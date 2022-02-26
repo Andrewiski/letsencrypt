@@ -6,9 +6,16 @@
     "configurations": [
         
         {
-            "env": {"USELOCALLIB":"true", "DEBUG": "letsencrypt, acmeCertificateManager"},
+            "env": {"USELOCALLIB":"true", "DEBUG": "letsencrypt:*"},
             "command": "node examples/basic/basic.js",
             "name": "Debug examples/basic/basic.js",
+            "request": "launch",
+            "type": "node-terminal"
+        },
+        {
+            "env": {"USELOCALLIB":"true", "DEBUG": "letsencrypt*"},
+            "command": "node examples/express/express.js",
+            "name": "Debug examples/express/express.js",
             "request": "launch",
             "type": "node-terminal"
         },

@@ -3,13 +3,16 @@
 
  Tool to assist with requesting lets Encrypt (ACME) certificates
 
+ See /examples/
+
  ```
 
 letsEncrypt.createRenewServerCertificate(
     {
-        keyFile: "www.example.com.pem.key",
+        keyFile: "www.example.com.pem.key",  //Will Create if Missing
         certFile: "www.example.com.pem.crt",
-        dnsNames: ["www.example.com"]
+        dnsNames: ["www.example.com"],
+        autoRenew:true
     }
 ).then(
     function(result){

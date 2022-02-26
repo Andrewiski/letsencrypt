@@ -249,39 +249,7 @@ module.exports.create = function (defaults) {
             return deferred.promise;
         }
 
-        //, loadServerX509PublicCert: function (options) {
-        //    let deferred = Deferred();
-
-        //    try {
-
-        //        debug('Loading saved public Server Cert File');
-        //        if (fs.existsSync(options.serverPublicKeyFile)) {
-        //            fs.readFile(options.serverPublicKeyFile, {encoding:'ascii'},
-        //                function (error, publicKeyPem) {
-        //                    try {
-        //                        if (error) {
-        //                            deferred.reject('error', error);
-
-        //                        } else {
-        //                            debug('Loading Public Pem into x509 Cert');
-        //                            let x509cert = Certificate.fromPEM(publicKeyPem);
-        //                            deferred.resolve(x509cert);
-        //                        }
-        //                    } catch (ex2) {
-        //                        debug('error', 'Error Reading Public Cert Pem', ex2);
-        //                        deferred.reject('error', ex2);
-        //                    }
-        //                }
-        //            );
-        //        } else {
-        //            throw "Public Cert File Not Found";
-        //        }
-        //    } catch (ex) {
-        //        debug('error', 'Error loading Server Private Key and Public Cert', ex);
-        //        deferred.reject('error', ex);
-        //    }
-        //    return deferred.promise;
-        //}
+        
 
         
 

@@ -3,21 +3,21 @@
 const http = require('http');
 const https = require('https');
 const path = require('path');
-//const extend = require('extend');
+const express = require('express');
 const fs = require('fs');
-//const Deferred = require('deferred');
-//const moment = require('moment');
-//const ACMECert = require('./acmeCertificateManager');
-//const ACMEHttp01 = require('./acme-http-01-memory.js');
 
+//const LetsEncrypt = require('@andrewiski/letsencrypt');
+var LetsEncrypt = null;
+if (process.env.USELOCALLIB === "true"){
+    LetsEncrypt = require("../../letsencrypt.js");
+}else{
+    LetsEncrypt = require("@andrewiski/letsencrypt");
+}
 
 var httpport = 80;
 var httpsport = 443;
 
 var certificatesFolder = "./certs";
-//var httpsServerKey = "www.example.com.pem.key"
-//var httpsServerCert = "www.example.com.pem.crt"
-
 
 
 if (certificatesFolder && certificatesFolder.startsWith("./") === true) {
@@ -29,18 +29,12 @@ if (fs.existsSync(certificatesFolder) === false) {
 }
 
 
-var httpsServerKey = path.join(certificatesFolder,"dev.voice.wilcowireless.com.pem.key");
-var httpsServerCert = path.join(certificatesFolder,"dev.voice.wilcowireless.com.pem.crt");
-var dnsNames = ["dev.voice.wilcowireless.com"]
-var certificateSubscriberEmail = "adevries@digitalexample.com"
+var httpsServerKey = path.join(certificatesFolder,"www.example.com.pem.key");
+var httpsServerCert = path.join(certificatesFolder,"www.example.com.pem.crt");
+var dnsNames = ["www.example.com"]
+var certificateSubscriberEmail = "jdoe@example.com"
 
-//const openssl = require('openssl');
-var LetsEncrypt = null;
-if (process.env.USELOCALLIB === "true"){
-    LetsEncrypt = require("../../letsencrypt.js");
-}else{
-    LetsEncrypt = require("@andrewiski/letsencrypt");
-}
+
 
 
 var letsEncryptOptions = {
@@ -51,23 +45,12 @@ var letsEncryptOptions = {
 var letsEncrypt = new LetsEncrypt(letsEncryptOptions);
 
 
+const app = express();
+
+app.get("/.well-known/acme-challenge/*", letsEncrypt.httpRequestHandler);
 
 
-
-
-//routes.get('/.well-known/acme-challenge/*', function (req, res) {
-var httpRequestListener = function(req, res){
-    try{
-        letsEncrypt.httpRequestHandler(req,res, httpRequestLisnerNext);
-    }catch(ex){
-        console.error('httpRequestListener', ex);
-        //res.status(500).send(ex);
-        res.statusCode = 500;
-        res.end(ex.message, 'utf8');
-    }
-}
-
-var httpRequestListenerNext = function(req, res){
+app.get("/*", function(req, res){
     //This get called as the Next if its not a well known 
     try{
         if (req.url === "/") {
@@ -76,7 +59,7 @@ var httpRequestListenerNext = function(req, res){
             res.end('<html><head><title>LetsEncrypt Example</title></head><body>Lets Encrypt Example</body></html>', 'utf8');
         
         }else{
-            //res.status(404).send('Challenge Not Found');
+            //res.status(404).send('File Not Found');
             console.error('File Not Found', req.path);
             res.statusCode = 404;
             res.end('File Not Found', 'utf8');
@@ -88,27 +71,7 @@ var httpRequestListenerNext = function(req, res){
         res.end(ex.message, 'utf8');
     }
 
-}
-
-var httpsRequestListener = function(req, res){
-    try{
-        console.log("httpsRequestListener");
-        if(req.url === "/"){
-            //res.status(200).send('<html><head><title>LetsEncrypt Example</title></head><body>Lets Encrypt Example</body></html>');
-            res.end('<html><head><title>LetsEncrypt Example</title></head><body>Lets Encrypt Example HTTPS</body></html>', 'utf8');
-        }else{
-            //res.status(404).send('File Not Found');
-            res.statusCode = 404;
-            res.end('File Not Found', 'utf8');
-        }
-    }catch(ex){
-        console.error('httpsRequestListener', ex);
-        //res.status(500).send(ex);
-        res.statusCode = 500;
-        res.end(ex.message, 'utf8');
-    }
-    
-}
+});
 
 
 var https_srv = null;
@@ -129,7 +92,7 @@ var getHttpsServerOptions = function () {
 
 
 var startHttpServer = function(){
-    http_srv = http.createServer(httpRequestListener).listen(httpport, function () {
+    http_srv = http.createServer(app).listen(httpport, function () {
         //console.log('Express server listening on port ' + port);
         console.log('http server listening on http port ' + httpport);
     });
@@ -139,7 +102,7 @@ var startHttpsServer = function(){
     let httpsOptions = getHttpsServerOptions();
     try{
         if(httpsOptions.key && httpsOptions.cert){
-            https_srv = https.createServer(httpsOptions, httpsRequestListener).listen(httpsport, function () {
+            https_srv = https.createServer(httpsOptions, app).listen(httpsport, function () {
                 //console.log('Express server listening on port ' + port);
                 console.log('https server listening on https port ' + httpsport);
             });
