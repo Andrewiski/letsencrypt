@@ -16,9 +16,7 @@ if (process.env.USELOCALLIB === "true"){
 
 var httpport = 80;
 var httpsport = 443;
-
 var certificatesFolder = "./certs";
-
 
 if (certificatesFolder && certificatesFolder.startsWith("./") === true) {
     certificatesFolder = path.join(__dirname, certificatesFolder)
@@ -28,14 +26,10 @@ if (fs.existsSync(certificatesFolder) === false) {
     fs.mkdirSync(certificatesFolder,{ recursive: true, mode: "744" });
 }
 
-
 var httpsServerKey = path.join(certificatesFolder,"www.example.com.pem.key");
 var httpsServerCert = path.join(certificatesFolder,"www.example.com.pem.crt");
 var dnsNames = ["www.example.com"]
 var certificateSubscriberEmail = "jdoe@example.com"
-
-
-
 
 var letsEncryptOptions = {
     certificatesFolder:  certificatesFolder,
@@ -44,11 +38,9 @@ var letsEncryptOptions = {
 
 var letsEncrypt = new LetsEncrypt(letsEncryptOptions);
 
-
 const app = express();
 
 app.get("/.well-known/acme-challenge/*", letsEncrypt.httpRequestHandler);
-
 
 app.get("/*", function(req, res){
     //This get called as the Next if its not a well known 
@@ -73,10 +65,8 @@ app.get("/*", function(req, res){
 
 });
 
-
 var https_srv = null;
 var http_srv = null;
-
 
 var getHttpsServerOptions = function () {
     
@@ -89,7 +79,6 @@ var getHttpsServerOptions = function () {
     }
     return httpsOptions;
 };
-
 
 var startHttpServer = function(){
     http_srv = http.createServer(app).listen(httpport, function () {
@@ -148,8 +137,6 @@ var checkCertificateStatus = function(){
     )    
    
 }
-
-
 
 //This function is called on an https certificate change
 var updateHttpsServer = function () {
