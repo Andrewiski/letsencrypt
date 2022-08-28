@@ -206,7 +206,7 @@ var LetsEncrypt = function (options) {
 
         try {
             var certs = [];
-            certs = this.loadX509PublicCertSync(options);
+            certs = this.loadX509CertSync(options);
             deferred.resolve(certs);
 
         } catch (ex) {
