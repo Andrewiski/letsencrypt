@@ -154,13 +154,15 @@ var LetsEncrypt = function (options) {
                 if(x509cert.validTo <= canRenewDate){
                     x509cert.canBeRenewed = true;
                 }
-                retval = x509cert;
+                //retval = x509cert;
                 if (key) {
                     try {
                         const data = Buffer.allocUnsafe(100);
-                        const signature = key.sign(data, 'sha256');
-                        x509cert.privateKeyValid = x509cert.publicKey.verify(data, signature, 'sha256');
-                        
+                        //need to add other signatureAlgoriths
+                        if(x509cert.signatureAlgorithm === 'sha256WithRsaEncryption'){
+                            const signature = key.sign(data, 'sha256');
+                            x509cert.privateKeyValid = x509cert.publicKey.verify(data, signature, 'sha256');
+                        }
                         break;
                         debug('info', 'Found valid private Key');
                     } catch (ex) {
@@ -193,7 +195,7 @@ var LetsEncrypt = function (options) {
                 }
             }
             
-            return retval;
+            return certs;
 
         } catch (ex) {
             debug('error', 'Error loading Public Cert', ex);
@@ -225,40 +227,50 @@ var LetsEncrypt = function (options) {
             }
             if(needToCreateCertificates === false ){
                 try{
-                    var x509Cert = loadX509CertSync({certFile:options.certFile , keyFile:options.keyFile });
-                    if(x509Cert.isExpired === true){
-                        needToCreateCertificates = true;
-                    }
-                    if(x509Cert.privateKeyValid === false){
-                        needToCreateCertificates = true;
-                    }
-                    //Are we within the Renew Windows
-                    if(x509Cert.canBeRenewed){
-                        needToCreateCertificates = true;
-                    }
-                    //IS the current certificate an exact match for the dns names as if the changed the DNS Names we should request a new Certificate
-                    if(x509Cert.dnsNames.length === options.dnsNames.length){
-                        for (let i = 0; i < options.dnsNames.length; i++) {
-                            let foundDnsName = false;
-                            for (let k = 0; k < x509Cert.dnsNames.length; i++) {
-                                if(options.dnsNames[i] === x509Cert.dnsNames[k]){
-                                    foundDnsName = true;
+                    var certs = loadX509CertSync({certFile:options.certFile , keyFile:options.keyFile });
+                    for (let i = 0; i < certs.length; i++) {
+                        var x509Cert = certs[i];
+                        //IS the current certificate an exact match for the dns names as if the changed the DNS Names we should request a new Certificate
+                        if(x509Cert.dnsNames.length === options.dnsNames.length){
+                            for (let i = 0; i < options.dnsNames.length; i++) {
+                                let foundDnsName = false;
+                                for (let k = 0; k < x509Cert.dnsNames.length; i++) {
+                                    if(options.dnsNames[i] === x509Cert.dnsNames[k]){
+                                        foundDnsName = true;
+                                        break;
+                                    }
+                                }
+                                if(foundDnsName === false){
+                                    needToCreateCertificates = true;
                                     break;
+                                }else{
+                                    if(x509Cert.isExpired === true){
+                                        needToCreateCertificates = true;
+                                    }
+                                    if(x509Cert.privateKeyValid === false){
+                                        needToCreateCertificates = true;
+                                    }
+                                    //Are we within the Renew Windows
+                                    if(x509Cert.canBeRenewed){
+                                        needToCreateCertificates = true;
+                                    }
+                                    if(needToCreateCertificates === false){
+                                        //found a valid certificate
+                                        return false;
+                                    }
                                 }
                             }
-                            if(foundDnsName === false){
-                                needToCreateCertificates = true;
-                                break;
-                            }
-                        }
-                    }else{
-                        needToCreateCertificates = true;
-                    }
+                            
 
-                    
+                        }else{
+                            needToCreateCertificates = true;
+                        }
+
+                    }        
                 }catch(ex){
                     needToCreateCertificates = true;
                 }
+            
             }
             return needToCreateCertificates;
     }

@@ -1,6 +1,6 @@
 {
     "name": "@andrewiski/letsencrypt",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "Tool to assist with creating and requesting lets Encrypt certificates from Node",
     "main": "letsencrypt.js",
     "license": "GPL-3.0-or-later",

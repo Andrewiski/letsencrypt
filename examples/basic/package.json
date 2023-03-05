@@ -22,7 +22,7 @@
       "start": "DEBUG=openssl node basic.js"
     },
     "dependencies": {
-        "@andrewiski/letsencrypt": "^1.0.1"
+        "@andrewiski/letsencrypt": "^1.0.3"
     }
   }
   
